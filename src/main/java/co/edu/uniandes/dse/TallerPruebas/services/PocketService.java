@@ -63,4 +63,31 @@ public class PocketService {
         log.info("Termina proceso de creación de un bolsillo para la cuenta con id = {}", accountId);
         return pocketRepository.save(pocketEntity);
     }
+
+
+    @Transactional
+    public void MoveToPocket(Long accountId, Long pocketId, Double amount) throws EntityNotFoundException, BusinessLogicException {
+        log.info("Inicia proceso de mover dinero a un bolsillo para la cuenta con id = {} y bolsillo con id = {}", accountId, pocketId);
+        
+        // 1. Verificar que saldo de cuenta es mayor al monto que se va a mover y que la cuenta existe
+        Optional<AccountEntity> accountEntity = accountRepository.findById(accountId);
+        if (accountEntity.isEmpty()) {
+            throw new EntityNotFoundException("La cuenta no existe");
+
+        }
+        if (accountEntity.get().getSaldo() < amount) {
+            throw new BusinessLogicException("La cuenta no tiene suficiente saldo para mover a un bolsillo");
+        }
+
+        // 2. Restar el monto a mover del saldo de la cuenta
+        accountEntity.get().setSaldo(accountEntity.get().getSaldo() - amount);
+        accountRepository.save(accountEntity.get());
+
+        // 3. Sumar el monto a mover al saldo del bolsillo
+        Optional<PocketEntity> pocketEntity = pocketRepository.findById(pocketId);
+        
+        pocketEntity.get().setSaldo(pocketEntity.get().getSaldo() + amount);
+        pocketRepository.save(pocketEntity.get());
+
+    }
 }
